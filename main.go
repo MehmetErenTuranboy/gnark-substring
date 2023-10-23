@@ -34,10 +34,10 @@ func main() {
 
 	// Secret values (characters 'A' and 'B' for example)
 	a := big.NewInt(int64('A'))
-	b := big.NewInt(int64('C'))
+	b := big.NewInt(int64('A'))
 
 	// Expected result: 0 (since 'A' is not equal to 'B')
-	expectedResult := big.NewInt(0)
+	expectedResult := big.NewInt(1)
 
 	// Compile the circuit into a set of constraints
 	ccs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &circuit)
