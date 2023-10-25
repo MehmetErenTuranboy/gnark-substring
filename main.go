@@ -22,17 +22,23 @@ type charEqualityCircuit struct {
 func (circuit *charEqualityCircuit) Define(api frontend.API) error {
 	// Initialize a variable to store if any comparison was successful
 	anyEqual := frontend.Variable(0)
+	iterratorB := 0
 
-	for _, a := range circuit.A {
-		for _, b := range circuit.B {
+	for i := 0; i < len(circuit.A); i++ {
+		for j := iterratorB; j < len(circuit.B); j++ {
+			fmt.Printf("\n %d: j's value", j)
 			// Calculate (a - B)
-			diff := api.Sub(a, b)
+			diff := api.Sub(circuit.A[i], circuit.B[j])
 
 			// Create a binary variable that is 1 if diff is 0, and 0 otherwise
 			isEqual := api.IsZero(diff)
 
 			// If any of the comparisons is true, set anyEqual to 1
 			anyEqual = api.Add(anyEqual, isEqual)
+			
+			if isEqual == 0 {
+				iterratorB++
+			}
 		}
 	}
 
@@ -56,8 +62,8 @@ func main() {
 		big.NewInt(int64('C')),
 	}
 	b := [2]*big.Int{
+		big.NewInt(int64('A')),
 		big.NewInt(int64('B')),
-		big.NewInt(int64('D')),
 	}
 
 	// Expected result: 1 (since 'A' is in the array)
