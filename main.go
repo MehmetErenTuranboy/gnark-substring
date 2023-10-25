@@ -13,7 +13,7 @@ import (
 
 type charEqualityCircuit struct {
 	A        [3]frontend.Variable `gnark:",secret"`
-	B        frontend.Variable   `gnark:",secret"`
+	B        [2]frontend.Variable   `gnark:",secret"`
 	AreEqual frontend.Variable   `gnark:",public"` // AreEqual is public, 1 if any element in A is equal to B, 0 otherwise
 }
 
@@ -24,14 +24,16 @@ func (circuit *charEqualityCircuit) Define(api frontend.API) error {
 	anyEqual := frontend.Variable(0)
 
 	for _, a := range circuit.A {
-		// Calculate (a - B)
-		diff := api.Sub(a, circuit.B)
+		for _, b := range circuit.B {
+			// Calculate (a - B)
+			diff := api.Sub(a, b)
 
-		// Create a binary variable that is 1 if diff is 0, and 0 otherwise
-		isEqual := api.IsZero(diff)
+			// Create a binary variable that is 1 if diff is 0, and 0 otherwise
+			isEqual := api.IsZero(diff)
 
-		// If any of the comparisons is true, set anyEqual to 1
-		anyEqual = api.Add(anyEqual, isEqual)
+			// If any of the comparisons is true, set anyEqual to 1
+			anyEqual = api.Add(anyEqual, isEqual)
+		}
 	}
 
 	// Convert anyEqual to a binary variable (0 or 1)
@@ -53,10 +55,13 @@ func main() {
 		big.NewInt(int64('B')),
 		big.NewInt(int64('C')),
 	}
-	b := big.NewInt(int64('C'))
+	b := [2]*big.Int{
+		big.NewInt(int64('B')),
+		big.NewInt(int64('D')),
+	}
 
 	// Expected result: 1 (since 'A' is in the array)
-	expectedResult := big.NewInt(1)
+	expectedResult := big.NewInt(2)
 
 	// Compile the circuit into a set of constraints
 	ccs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &circuit)
@@ -76,7 +81,10 @@ func main() {
 			frontend.Variable(a[1]),
 			frontend.Variable(a[2]),
 		},
-		B:        frontend.Variable(b),
+		B:  [2]frontend.Variable{
+			frontend.Variable(b[0]),
+			frontend.Variable(b[1]),
+		},
 		AreEqual: frontend.Variable(expectedResult),
 	}
 	
