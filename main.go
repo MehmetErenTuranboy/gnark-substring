@@ -12,19 +12,19 @@ import (
 )
 
 const (
-	stringLength = 10
-	regexLength  = 5
+	stringLength    = 10
+	substringLenght = 5
 )
 
 type charEqualityCircuit struct {
-	A [stringLength]frontend.Variable `gnark:",secret"`
-	B [regexLength]frontend.Variable  `gnark:",public"`
+	A [stringLength]frontend.Variable    `gnark:",secret"`
+	B [substringLenght]frontend.Variable `gnark:",public"`
 }
 
 func (circuit *charEqualityCircuit) Define(api frontend.API) error {
 	matchedFront := frontend.Variable(1)
 	result := frontend.Variable(0)
-	regexSize := frontend.Variable(regexLength)
+	regexSize := frontend.Variable(substringLenght)
 	pivotA := 0
 	// Initialize a variable to store if any comparison was successful
 	for i := 0; i < len(circuit.A); i++ {
@@ -63,10 +63,10 @@ func main() {
 		}
 	}
 
-	b := make([]*big.Int, regexLength)
+	b := make([]*big.Int, substringLenght)
 	regexPattern := "WORLD"
 	for i, char := range regexPattern {
-		if i < regexLength {
+		if i < substringLenght {
 			b[i] = big.NewInt(int64(char))
 		}
 	}
@@ -85,14 +85,14 @@ func main() {
 
 	assignment := charEqualityCircuit{
 		A: [stringLength]frontend.Variable{},
-		B: [regexLength]frontend.Variable{},
+		B: [substringLenght]frontend.Variable{},
 	}
 
 	for i := 0; i < stringLength; i++ {
 		assignment.A[i] = frontend.Variable(a[i])
 	}
 
-	for i := 0; i < regexLength; i++ {
+	for i := 0; i < substringLenght; i++ {
 		assignment.B[i] = frontend.Variable(b[i])
 	}
 
