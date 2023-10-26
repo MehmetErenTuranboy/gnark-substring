@@ -12,50 +12,32 @@ import (
 )
 
 type charEqualityCircuit struct {
-	A               [3]frontend.Variable `gnark:",secret"`
-	B               [2]frontend.Variable `gnark:",public"`
-	AreEqual        frontend.Variable    `gnark:",public"`
-	numberOfMathces int
-	pivotA          int
-	pivotB          int
+	A        [3]frontend.Variable `gnark:",secret"`
+	B        [2]frontend.Variable `gnark:",public"`
+	AreEqual frontend.Variable    `gnark:",public"`
 }
 
 func (circuit *charEqualityCircuit) Define(api frontend.API) error {
 	matchedFront := frontend.Variable(1)
 	result := frontend.Variable(0)
 	regexSize := frontend.Variable(2)
+	pivotA := 0
 	// Initialize a variable to store if any comparison was successful
-	circuit.pivotA = 0
-	circuit.pivotB = 0
-	circuit.numberOfMathces = 0
-
 	for i := 0; i < len(circuit.A); i++ {
-		circuit.pivotA = i
-		tmp := circuit.numberOfMathces
-		if circuit.pivotA == len(circuit.A) || circuit.pivotB == len(circuit.B)+1 {
-			fmt.Printf("\n Termination case for helper function")
-
-			api.Println("Final result:", result)
-			api.AssertIsEqual(result, regexSize)
-			return nil
-		}
-		circuit.numberOfMathces = 0
+		pivotA = i
 		for j := 0; j < len(circuit.B); j++ {
-			diff := api.Sub(circuit.A[circuit.pivotA], circuit.B[circuit.pivotB])
+			diff := api.Sub(circuit.A[pivotA], circuit.B[j])
 			isEqual := api.IsZero(diff)
 			flag := api.IsZero(api.Sub(regexSize, result))
 			matchedFront = api.Select(flag, 0, matchedFront)
 			result = api.Select(api.Or(isEqual, flag), api.Add(result, matchedFront), 0)
-			fmt.Printf("Main integer resultt : %d\n", circuit.numberOfMathces)
-
 			api.Println("Frontinteger resultt:: ", result)
-
+			if pivotA < len(circuit.A)-1 {
+				pivotA++
+			} else {
+				break
+			}
 		}
-
-		circuit.numberOfMathces = tmp
-
-		circuit.numberOfMathces++
-		fmt.Printf("integer resultt1 : %d", circuit.numberOfMathces)
 
 		api.Println("reultequal", result)
 	}
