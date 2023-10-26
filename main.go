@@ -12,42 +12,66 @@ import (
 )
 
 type charEqualityCircuit struct {
-	A        [3]frontend.Variable `gnark:",secret"`
-	B        [2]frontend.Variable   `gnark:",secret"`
-	AreEqual frontend.Variable   `gnark:",public"` // AreEqual is public, 1 if any element in A is equal to B, 0 otherwise
+	A               [3]frontend.Variable `gnark:",secret"`
+	B               [2]frontend.Variable `gnark:",public"`
+	AreEqual        frontend.Variable    `gnark:",public"` // AreEqual is public, 1 if any element in A is equal to B, 0 otherwise
+	matchedFront    frontend.Variable    `gnark:",public"`
+	numberOfMathces int
+	pivotA          int
+	pivotB          int
+	matched         bool
 }
 
-// ... (previous code)
-
 func (circuit *charEqualityCircuit) Define(api frontend.API) error {
+	circuit.matchedFront = 0
+	matchedFront := frontend.Variable(1)
+	result := frontend.Variable(0)
+	regexSize := frontend.Variable(2)
 	// Initialize a variable to store if any comparison was successful
-	anyEqual := frontend.Variable(0)
-	iterratorB := 0
+	circuit.pivotA = 0
+	circuit.pivotB = 0
+	circuit.numberOfMathces = 0
+	circuit.matched = false
 
-	for i := 0; i < len(circuit.A); i++ {
-		for j := iterratorB; j < len(circuit.B); j++ {
-			fmt.Printf("\n %d: j's value", j)
-			// Calculate (a - B)
-			diff := api.Sub(circuit.A[i], circuit.B[j])
+	for i := 0; i <= len(circuit.A); i++ {
+		circuit.pivotA = i
+		tmp := circuit.numberOfMathces
+		if circuit.pivotA == len(circuit.A) || circuit.pivotB == len(circuit.B) {
+			fmt.Printf("\n Termination case for helper function")
 
-			// Create a binary variable that is 1 if diff is 0, and 0 otherwise
-			isEqual := api.IsZero(diff)
+			api.Println("Final result:", result)
+			api.AssertIsEqual(result, regexSize)
+			return nil
+		}
+		circuit.numberOfMathces = 0
+		diff := api.Sub(circuit.A[circuit.pivotA], circuit.B[circuit.pivotB])
+		isEqual := api.IsZero(diff)
+		flag := api.IsZero(api.Sub(regexSize, result))
+		matchedFront = api.Select(flag, 0, matchedFront)
+		result = api.Select(api.Or(isEqual, flag), api.Add(result, matchedFront), 0)
+		fmt.Printf("Main integer resultt : %d\n", circuit.numberOfMathces)
 
-			// If any of the comparisons is true, set anyEqual to 1
-			anyEqual = api.Add(anyEqual, isEqual)
-			
-			if isEqual == 0 {
-				iterratorB++
-			}
+		api.Println("Frontinteger resultt:: ", result)
+
+		circuit.pivotB = 0
+
+		// api.AssertIsDifferent(diff, 0)
+		api.Println("helllp", diff)
+
+		circuit.pivotB++
+		circuit.numberOfMathces = tmp
+
+		circuit.numberOfMathces++
+		fmt.Printf("integer resultt1 : %d", circuit.numberOfMathces)
+
+		api.Println(isEqual)
+
+		if circuit.pivotA == 5 {
+			break
 		}
 	}
 
-	// Convert anyEqual to a binary variable (0 or 1)
-	// Here you might need to implement the logic for IsNonZero if it's not available
-	areEqual := anyEqual // Replace this with the correct logic
-
-	// Assert that the binary variable matches the public AreEqual variable
-	api.AssertIsEqual(circuit.AreEqual, areEqual)
+	api.AssertIsEqual(result, regexSize)
 
 	return nil
 }
@@ -67,10 +91,10 @@ func main() {
 	}
 
 	// Expected result: 1 (since 'A' is in the array)
-	expectedResult := big.NewInt(2)
+	expectedResult := big.NewInt(0)
 
 	// Compile the circuit into a set of constraints
-	ccs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &circuit)
+	ccs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &circuit, frontend.IgnoreUnconstrainedInputs())
 	if err != nil {
 		log.Fatalf("Failed to compile the circuit: %v", err)
 	}
@@ -87,13 +111,12 @@ func main() {
 			frontend.Variable(a[1]),
 			frontend.Variable(a[2]),
 		},
-		B:  [2]frontend.Variable{
+		B: [2]frontend.Variable{
 			frontend.Variable(b[0]),
 			frontend.Variable(b[1]),
 		},
 		AreEqual: frontend.Variable(expectedResult),
 	}
-	
 
 	// Create a witness from the assignment
 	witness, err := frontend.NewWitness(&assignment, ecc.BN254)
