@@ -11,16 +11,20 @@ import (
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 )
 
+const (
+	stringLength = 10
+	regexLength  = 5
+)
+
 type charEqualityCircuit struct {
-	A        [3]frontend.Variable `gnark:",secret"`
-	B        [2]frontend.Variable `gnark:",public"`
-	AreEqual frontend.Variable    `gnark:",public"`
+	A [stringLength]frontend.Variable `gnark:",secret"`
+	B [regexLength]frontend.Variable  `gnark:",public"`
 }
 
 func (circuit *charEqualityCircuit) Define(api frontend.API) error {
 	matchedFront := frontend.Variable(1)
 	result := frontend.Variable(0)
-	regexSize := frontend.Variable(2)
+	regexSize := frontend.Variable(regexLength)
 	pivotA := 0
 	// Initialize a variable to store if any comparison was successful
 	for i := 0; i < len(circuit.A); i++ {
@@ -51,18 +55,21 @@ func main() {
 	var circuit charEqualityCircuit
 
 	// Secret values
-	a := [3]*big.Int{
-		big.NewInt(int64('A')),
-		big.NewInt(int64('B')),
-		big.NewInt(int64('C')),
-	}
-	b := [2]*big.Int{
-		big.NewInt(int64('B')),
-		big.NewInt(int64('C')),
+	a := make([]*big.Int, stringLength)
+	inputString := "HELLOWORLD"
+	for i, char := range inputString {
+		if i < stringLength {
+			a[i] = big.NewInt(int64(char))
+		}
 	}
 
-	// Expected result: 1 (since 'A' is in the array)
-	expectedResult := big.NewInt(0)
+	b := make([]*big.Int, regexLength)
+	regexPattern := "WORLD"
+	for i, char := range regexPattern {
+		if i < regexLength {
+			b[i] = big.NewInt(int64(char))
+		}
+	}
 
 	// Compile the circuit into a set of constraints
 	ccs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &circuit, frontend.IgnoreUnconstrainedInputs())
@@ -77,16 +84,16 @@ func main() {
 	}
 
 	assignment := charEqualityCircuit{
-		A: [3]frontend.Variable{
-			frontend.Variable(a[0]),
-			frontend.Variable(a[1]),
-			frontend.Variable(a[2]),
-		},
-		B: [2]frontend.Variable{
-			frontend.Variable(b[0]),
-			frontend.Variable(b[1]),
-		},
-		AreEqual: frontend.Variable(expectedResult),
+		A: [stringLength]frontend.Variable{},
+		B: [regexLength]frontend.Variable{},
+	}
+
+	for i := 0; i < stringLength; i++ {
+		assignment.A[i] = frontend.Variable(a[i])
+	}
+
+	for i := 0; i < regexLength; i++ {
+		assignment.B[i] = frontend.Variable(b[i])
 	}
 
 	// Create a witness from the assignment
