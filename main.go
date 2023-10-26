@@ -14,16 +14,13 @@ import (
 type charEqualityCircuit struct {
 	A               [3]frontend.Variable `gnark:",secret"`
 	B               [2]frontend.Variable `gnark:",public"`
-	AreEqual        frontend.Variable    `gnark:",public"` // AreEqual is public, 1 if any element in A is equal to B, 0 otherwise
-	matchedFront    frontend.Variable    `gnark:",public"`
+	AreEqual        frontend.Variable    `gnark:",public"`
 	numberOfMathces int
 	pivotA          int
 	pivotB          int
-	matched         bool
 }
 
 func (circuit *charEqualityCircuit) Define(api frontend.API) error {
-	circuit.matchedFront = 0
 	matchedFront := frontend.Variable(1)
 	result := frontend.Variable(0)
 	regexSize := frontend.Variable(2)
@@ -31,12 +28,11 @@ func (circuit *charEqualityCircuit) Define(api frontend.API) error {
 	circuit.pivotA = 0
 	circuit.pivotB = 0
 	circuit.numberOfMathces = 0
-	circuit.matched = false
 
-	for i := 0; i <= len(circuit.A); i++ {
+	for i := 0; i < len(circuit.A); i++ {
 		circuit.pivotA = i
 		tmp := circuit.numberOfMathces
-		if circuit.pivotA == len(circuit.A) || circuit.pivotB == len(circuit.B) {
+		if circuit.pivotA == len(circuit.A) || circuit.pivotB == len(circuit.B)+1 {
 			fmt.Printf("\n Termination case for helper function")
 
 			api.Println("Final result:", result)
@@ -44,31 +40,24 @@ func (circuit *charEqualityCircuit) Define(api frontend.API) error {
 			return nil
 		}
 		circuit.numberOfMathces = 0
-		diff := api.Sub(circuit.A[circuit.pivotA], circuit.B[circuit.pivotB])
-		isEqual := api.IsZero(diff)
-		flag := api.IsZero(api.Sub(regexSize, result))
-		matchedFront = api.Select(flag, 0, matchedFront)
-		result = api.Select(api.Or(isEqual, flag), api.Add(result, matchedFront), 0)
-		fmt.Printf("Main integer resultt : %d\n", circuit.numberOfMathces)
+		for j := 0; j < len(circuit.B); j++ {
+			diff := api.Sub(circuit.A[circuit.pivotA], circuit.B[circuit.pivotB])
+			isEqual := api.IsZero(diff)
+			flag := api.IsZero(api.Sub(regexSize, result))
+			matchedFront = api.Select(flag, 0, matchedFront)
+			result = api.Select(api.Or(isEqual, flag), api.Add(result, matchedFront), 0)
+			fmt.Printf("Main integer resultt : %d\n", circuit.numberOfMathces)
 
-		api.Println("Frontinteger resultt:: ", result)
+			api.Println("Frontinteger resultt:: ", result)
 
-		circuit.pivotB = 0
+		}
 
-		// api.AssertIsDifferent(diff, 0)
-		api.Println("helllp", diff)
-
-		circuit.pivotB++
 		circuit.numberOfMathces = tmp
 
 		circuit.numberOfMathces++
 		fmt.Printf("integer resultt1 : %d", circuit.numberOfMathces)
 
-		api.Println(isEqual)
-
-		if circuit.pivotA == 5 {
-			break
-		}
+		api.Println("reultequal", result)
 	}
 
 	api.AssertIsEqual(result, regexSize)
@@ -86,8 +75,8 @@ func main() {
 		big.NewInt(int64('C')),
 	}
 	b := [2]*big.Int{
-		big.NewInt(int64('A')),
 		big.NewInt(int64('B')),
+		big.NewInt(int64('C')),
 	}
 
 	// Expected result: 1 (since 'A' is in the array)
