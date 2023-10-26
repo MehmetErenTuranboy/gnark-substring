@@ -35,15 +35,13 @@ func (circuit *charEqualityCircuit) Define(api frontend.API) error {
 			flag := api.IsZero(api.Sub(regexSize, result))
 			matchedFront = api.Select(flag, 0, matchedFront)
 			result = api.Select(api.Or(isEqual, flag), api.Add(result, matchedFront), 0)
-			api.Println("Frontinteger resultt:: ", result)
+			api.Println("Matching result ", result, circuit.A[pivotA], circuit.B[j])
 			if pivotA < len(circuit.A)-1 {
 				pivotA++
 			} else {
 				break
 			}
 		}
-
-		api.Println("reultequal", result)
 	}
 
 	api.AssertIsEqual(result, regexSize)
